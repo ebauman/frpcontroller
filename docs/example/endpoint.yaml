@@ -1,0 +1,9 @@
+---
+apiVersion: frp.1eb100.net/v1
+kind: Endpoint
+metadata:
+  name: hello-endpoint
+spec:
+  addr: '<server-ip>'
+  port: 1111
+  token: helloworld
