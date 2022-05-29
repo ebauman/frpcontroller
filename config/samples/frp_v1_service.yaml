@@ -1,0 +1,6 @@
+apiVersion: frp.1eb100.net/v1
+kind: Service
+metadata:
+  name: service-sample
+spec:
+  # TODO(user): Add fields here

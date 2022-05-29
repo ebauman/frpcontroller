@@ -1,0 +1,25 @@
+domain: 1eb100.net
+layout:
+- go.kubebuilder.io/v3
+projectName: frpcontroller
+repo: github.com/ebauman/frpcontroller
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: 1eb100.net
+  group: frp
+  kind: Endpoint
+  path: github.com/ebauman/frpcontroller/api/v1
+  version: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: 1eb100.net
+  group: frp
+  kind: Service
+  path: github.com/ebauman/frpcontroller/api/v1
+  version: v1
+version: "3"
