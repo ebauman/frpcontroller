@@ -1,0 +1,516 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    control-plane: controller-manager
+    frp.1eb100.net/release: v0.0.2
+  name: frpcontroller-system
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.8.0
+  creationTimestamp: null
+  labels:
+    frp.1eb100.net/release: v0.0.2
+  name: endpoints.frp.1eb100.net
+spec:
+  group: frp.1eb100.net
+  names:
+    kind: Endpoint
+    listKind: EndpointList
+    plural: endpoints
+    singular: endpoint
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: Endpoint is the Schema for the endpoints API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: EndpointSpec defines the desired state of Endpoint
+            properties:
+              addr:
+                description: Addr specifies the remote endpoint address.
+                minLength: 1
+                type: string
+              port:
+                description: Port specifies the remote port.
+                format: int32
+                type: integer
+              token:
+                description: Token specifies the token to connect the endpoint.
+                minLength: 1
+                type: string
+            required:
+            - addr
+            - port
+            type: object
+          status:
+            description: EndpointStatus defines the observed state of Endpoint
+            properties:
+              state:
+                description: State tells the state of the endpoint.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.8.0
+  creationTimestamp: null
+  labels:
+    frp.1eb100.net/release: v0.0.2
+  name: services.frp.1eb100.net
+spec:
+  group: frp.1eb100.net
+  names:
+    kind: Service
+    listKind: ServiceList
+    plural: services
+    singular: service
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: Service is the Schema for the services API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ServiceSpec defines the desired state of Service
+            properties:
+              endpoint:
+                description: Name of the remote endpoint to use.
+                minLength: 1
+                type: string
+              ports:
+                description: List of ports that are exposed to the frp server.
+                items:
+                  properties:
+                    localPort:
+                      description: The local port to expose (service.ports.TargetPort).
+                      format: int32
+                      type: integer
+                    name:
+                      description: The name of this port to use in frp side.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      type: string
+                    protocol:
+                      description: The protocol to use.
+                      enum:
+                      - TCP
+                      - UDP
+                      type: string
+                    remotePort:
+                      description: The remote port to use (service.ports.Port).
+                      format: int32
+                      type: integer
+                  required:
+                  - localPort
+                  - name
+                  - protocol
+                  - remotePort
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - remotePort
+                - protocol
+                x-kubernetes-list-type: map
+              selector:
+                additionalProperties:
+                  type: string
+                description: The selector for picking up pods to the service.
+                type: object
+              serviceLabels:
+                additionalProperties:
+                  type: string
+                description: Extra labels for the generated service.
+                type: object
+            required:
+            - endpoint
+            - ports
+            - selector
+            type: object
+          status:
+            description: ServiceStatus defines the observed state of Service
+            properties:
+              state:
+                description: State tells the service state.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    frp.1eb100.net/release: v0.0.2
+  name: frpcontroller-controller-manager
+  namespace: frpcontroller-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    frp.1eb100.net/release: v0.0.2
+  name: frpcontroller-leader-election-role
+  namespace: frpcontroller-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    frp.1eb100.net/release: v0.0.2
+  name: frpcontroller-manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - frp.1eb100.net
+  resources:
+  - endpoints
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - frp.1eb100.net
+  resources:
+  - endpoints/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - frp.1eb100.net
+  resources:
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - frp.1eb100.net
+  resources:
+  - services/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    frp.1eb100.net/release: v0.0.2
+  name: frpcontroller-metrics-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    frp.1eb100.net/release: v0.0.2
+  name: frpcontroller-proxy-role
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    frp.1eb100.net/release: v0.0.2
+  name: frpcontroller-leader-election-rolebinding
+  namespace: frpcontroller-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: frpcontroller-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: frpcontroller-controller-manager
+  namespace: frpcontroller-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    frp.1eb100.net/release: v0.0.2
+  name: frpcontroller-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: frpcontroller-manager-role
+subjects:
+- kind: ServiceAccount
+  name: frpcontroller-controller-manager
+  namespace: frpcontroller-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    frp.1eb100.net/release: v0.0.2
+  name: frpcontroller-proxy-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: frpcontroller-proxy-role
+subjects:
+- kind: ServiceAccount
+  name: frpcontroller-controller-manager
+  namespace: frpcontroller-system
+---
+apiVersion: v1
+data:
+  controller_manager_config.yaml: |
+    apiVersion: controller-runtime.sigs.k8s.io/v1alpha1
+    kind: ControllerManagerConfig
+    health:
+      healthProbeBindAddress: :8081
+    metrics:
+      bindAddress: 127.0.0.1:8080
+    webhook:
+      port: 9443
+    leaderElection:
+      leaderElect: true
+      resourceName: aa846172.1eb100.net
+kind: ConfigMap
+metadata:
+  labels:
+    frp.1eb100.net/release: v0.0.2
+  name: frpcontroller-manager-config
+  namespace: frpcontroller-system
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: controller-manager
+    frp.1eb100.net/release: v0.0.2
+  name: frpcontroller-controller-manager-metrics-service
+  namespace: frpcontroller-system
+spec:
+  ports:
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: https
+  selector:
+    control-plane: controller-manager
+    frp.1eb100.net/release: v0.0.2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    control-plane: controller-manager
+    frp.1eb100.net/release: v0.0.2
+  name: frpcontroller-controller-manager
+  namespace: frpcontroller-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+      frp.1eb100.net/release: v0.0.2
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        control-plane: controller-manager
+        frp.1eb100.net/release: v0.0.2
+    spec:
+      containers:
+      - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:8080/
+        - --logtostderr=true
+        - --v=0
+        image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 5m
+            memory: 64Mi
+      - args:
+        - --health-probe-bind-address=:8081
+        - --metrics-bind-address=127.0.0.1:8080
+        - --leader-elect
+        command:
+        - /manager
+        image: ebauman/frpcontroller:v0.0.2
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: frpcontroller-controller-manager
+      terminationGracePeriodSeconds: 10
